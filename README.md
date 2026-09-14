@@ -1,24 +1,14 @@
-# Explainer for the TODO API
+# Explainer for the Unwanted Work API
 
-**Instructions for the explainer author: Search for "todo" in this repository and update all the
-instances as appropriate. For the instances in `index.bs`, update the repository name, but you can
-leave the rest until you start the specification. Then delete the TODOs and this block of text.**
-
-This proposal is an early design sketch by [TODO: team] to describe the problem below and solicit
+This proposal is an early design sketch by fergal@chromium.org to describe the problem below and solicit
 feedback on the proposed solution. It has not been approved to ship in Chrome.
-
-TODO: Fill in the whole explainer template below using https://tag.w3.org/explainers/ as a
-reference. Look for [brackets].
 
 ## Proponents
 
-- [Proponent team 1]
-- [Proponent team 2]
-- [etc.]
+- fergal@chromium.org
 
 ## Participate
-- https://github.com/explainers-by-googlers/[your-repository-name]/issues
-- [Discussion forum]
+- https://github.com/explainers-by-googlers/work-vs-idle/issues
 
 ## Table of Contents [if the explainer is longer than one printed page]
 
@@ -51,41 +41,103 @@ reference. Look for [brackets].
 
 ## Introduction
 
-[The "executive summary" or "abstract".
-Explain in a few sentences what the goals of the project are,
-and a brief overview of how the solution works.
-This should be no more than 1-2 paragraphs.]
+Sites often unintentionally keep the CPU awake or even heavily loaded
+while doing nothing useful.
+This can be due to bugs in JS,
+animations that are expensive
+or that are running even nothing is visibly animating.
+
+This can result in battery drain, hot laptops
+and slow performance of the site itself and other sites.
 
 ## Goals
 
-[What is the **end-user need** which this project aims to address? Make this section short, and
-elaborate in the Use cases section.]
+Allow sites to
+- quantify time spent doing work vs idle
+- identify the root causes of unintended work
+- distinguish work by common categories, JS, animation, media, etc.
+- distinguish intended work from unintended work
+   - it's not a bug for a movie player to being constantly playing a movie
+   - it's not a bug for a spinner to spin
+     *while* the page is visible and waiting for something to complete
+
+This API should be low-enough overhead to be always-on
+so that unintended work can be discovered
+- early in development and internal dogfood usage
+- in the wild
+
+This API is intended to be a tool
+for sites to achieve long periods of idleness
+when the user is not actively engaged with them.
 
 ## Non-goals
 
-[If there are "adjacent" goals which may appear to be in scope but aren't,
-enumerate them here. This section may be fleshed out as your design progresses and you encounter necessary technical and other trade-offs.]
-
-## User research
-
-[If any user research has been conducted to inform your design choices,
-discuss the process and findings. User research should be more common than it is.]
+This is not for
+- measuring CPU usage
+- measuring battery usage/level
+- profiling
 
 ## Use cases
 
-[Describe in detail what problems end-users are facing, which this project is trying to solve. A
-common mistake in this section is to take a web developer's or server operator's perspective, which
-makes reviewers worry that the proposal will violate [RFC 8890, The Internet is for End
-Users](https://www.rfc-editor.org/rfc/rfc8890).]
+There are multiple well-known sites
+that I regularly kill from the browser's task manager
+because my laptop is hot, my fans are spinning
+and those sites are using constant CPU
+indicating that something is happening maybe with every frame
+while doing nothing visible or useful to me as a user.
 
-### Use case 1
+### Longitudinal monitoring
 
-### Use case 2
+Over time, a site measures
+- its work vs idleness
+- its time-to-idleness after user interaction
+
+It sees a sudden regression in a new version.
+The devs use data from the wild to identify the cause.
+
+We know that some sites have attempted to measure
+time-to-idleness using LoAF.
+
+### Immediate feedback to devs
+
+For devs,
+provide a visual indicator
+when a page has been unintentionally non-idle
+for a significant part of the last 10-20s.
+This could be a library dropped into every page.
+
+### Detect expensive or unintended animations
+
+We know that teams at Google and elsewhere
+have already developed "bad animation" detectors
+based on LoAF and other APIs.
+These have drawbacks like requiring actual dropped frames
+(which often don't happen on the high end machines that developers typically use)
+and intrusive code changes or monkey-patching.
 
 <!-- In your initial explainer, you shouldn't be attached or appear attached to any of the potential
 solutions you describe below this. -->
 
-## [Potential Solution]
+## More info
+
+For now this repo and explainer is a place-holder.
+An API is described in this [slide deck](https://docs.google.com/presentation/d/1d8VaGHF9OFF9Kuy--jIUvYLcGouPtJg7Yxtryk3HvMc/edit).
+This API was discussed at the [WebPerfWG meeting on 2026-09-10](https://docs.google.com/document/d/10dz_7QM5XCNsGeI63R864lF9gFqlqQD37B4q8Q46LMM/edit?tab=t.0#heading=h.pndss1ey0460)
+and this repo has been created to facilitate discussion.
+The content from that slide deck will be moved into this explainer.
+
+There are many issues with the API shape of this proposal
+- maybe it should align with `PerformanceObserver`
+- maybe it should align with the JS Profiling API
+
+Right now, the API shape is secondary to figuring out
+- what would actually be useful (and used in reality)
+- what should be part of the API and what should be left to be implemented in JS around the API
+
+# This explainer is incomplete
+
+*The document from here down is the remaining parts of the template.
+It will be filled out soon.*
 
 [For each related element of the proposed solution - be it an additional JS method, a new object, a new element, a new concept etc., create a section which briefly describes it.]
 
