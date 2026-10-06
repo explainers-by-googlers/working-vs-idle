@@ -41,8 +41,7 @@ feedback on the proposed solution. It has not been approved to ship in Chrome.
 
 ## Introduction
 
-Sites often unintentionally keep the CPU awake or even heavily loaded
-while doing nothing useful.
+Run-away work is a problem on the web.
 This can be due to bugs in JS,
 animations that are expensive
 or that are running even nothing is visibly animating.
@@ -50,19 +49,60 @@ or that are running even nothing is visibly animating.
 This can result in battery drain, hot laptops
 and slow performance of the site itself and other sites.
 
+This explainer proposes and API
+that would allow sites to monitor the work that they do
+in an aggregate form
+that would allow for reporting and debugging of these problems.
+
+## The Problem
+
+### For web users
+
+There are multiple well-known sites
+that I regularly kill from the browser's task manager
+because my laptop is hot, my fans are spinning
+and those sites are using constant CPU
+indicating that something is happening maybe with every frame
+while doing nothing visible or useful to me as a user.
+
+As a user of the web,
+I want sites to pay attention to their CPU usage
+both in terms of total CPU usage
+and frequent wake-ups.
+
+### For web authors
+
+Performance suffers when sites are doing unintended work.
+Users kill tabs that make their laptops hot.
+The existing tools are not adequate for measurement
+or root-causing.
+JS self-profiling is
+- heavy-weight, so not suitable for continuous measurement
+- produces a lot of data (full stack traces) that is not necessary for attributing initiator
+- samples at an interval so can easily miss short-duration wake-ups
+- only covers JS, not animation, layout etc
+
+### For browser vendors
+
+Browsers are blamed for using CPU.
+Vendors put effort into detecting poor performance caused by sites
+and prompt users to kill those sites.
+There is no signal back to the sites.
+
 ## Goals
 
 Allow sites to
-- quantify time spent doing work vs idle
-- identify the root causes of unintended work
+- quantify time spent doing work vs idle.
+- identify the root causes of unintended work.
 - distinguish work by common categories, JS, animation, media, etc.
-- distinguish intended work from unintended work
-   - it's not a bug for a movie player to being constantly playing a movie
-   - it's not a bug for a spinner to spin
-     *while* the page is visible and waiting for something to complete
+- distinguish intended work from unintended work.
+   - it's not a bug for a movie player to being constantly playing a movie.
+   - it's not a bug for a spinner to spin.
+     *while* the page is visible and waiting for something to complete.
+- distinguish between repeated wake-ups and solid CPU usage.
 
 This API should be low-enough overhead to be always-on
-so that unintended work can be discovered
+so that unintended work can be discovered and debugged
 - early in development and internal dogfood usage
 - in the wild
 
@@ -73,18 +113,12 @@ when the user is not actively engaged with them.
 ## Non-goals
 
 This is not for
-- measuring CPU usage
 - measuring battery usage/level
-- profiling
+- code profiling
+- measuring CPU usage
+  (although some CPU usage stats may be produced)
 
 ## Use cases
-
-There are multiple well-known sites
-that I regularly kill from the browser's task manager
-because my laptop is hot, my fans are spinning
-and those sites are using constant CPU
-indicating that something is happening maybe with every frame
-while doing nothing visible or useful to me as a user.
 
 ### Longitudinal monitoring
 
@@ -100,11 +134,13 @@ time-to-idleness using LoAF.
 
 ### Immediate feedback to devs
 
-For devs,
-provide a visual indicator
-when a page has been unintentionally non-idle
-for a significant part of the last 10-20s.
-This could be a library dropped into every page.
+There could be a drop-in library
+that will monitor work and idleness
+and fire an event when some threshold of work is crossed.
+E.g. < 80% idle for the last 10s
+In dev mode the site could visually indicate this
+so that devs get immediate feedback
+when they introduce bad changes.
 
 ### Detect expensive or unintended animations
 
@@ -114,9 +150,6 @@ based on LoAF and other APIs.
 These have drawbacks like requiring actual dropped frames
 (which often don't happen on the high end machines that developers typically use)
 and intrusive code changes or monkey-patching.
-
-<!-- In your initial explainer, you shouldn't be attached or appear attached to any of the potential
-solutions you describe below this. -->
 
 ## More info
 
