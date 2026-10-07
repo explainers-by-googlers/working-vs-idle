@@ -3,6 +3,14 @@
 This proposal is an early design sketch by fergal@chromium.org to describe the problem below and solicit
 feedback on the proposed solution. It has not been approved to ship in Chrome.
 
+## Status
+
+This explainer is a draft proposal seeking feedback.
+Feedback on the use cases is currently more desirable
+than feedback on the specifics of the API.
+
+Several parts of this explainer are still incomplete.
+
 ## Proponents
 
 - fergal@chromium.org
@@ -91,6 +99,8 @@ There is no signal back to the sites.
 
 ## Goals
 
+### Capabilities
+
 Allow sites to
 - quantify time spent doing work vs idle.
 - identify the root causes of unintended work.
@@ -101,10 +111,19 @@ Allow sites to
      *while* the page is visible and waiting for something to complete.
 - distinguish between repeated wake-ups and solid CPU usage.
 
+### Deployability
+
 This API should be low-enough overhead to be always-on
 so that unintended work can be discovered and debugged
 - early in development and internal dogfood usage
 - in the wild
+
+It's not realistic for every site to write code to use this API.
+Rather, it should be trivial for sites to include a library
+to gather stats via this API
+or for RUM providers to provide it as a service.
+
+### End result
 
 This API is intended to be a tool
 for sites to achieve long periods of idleness
@@ -115,8 +134,6 @@ when the user is not actively engaged with them.
 This is not for
 - measuring battery usage/level
 - code profiling
-- measuring CPU usage
-  (although some CPU usage stats may be produced)
 
 ## Use cases
 
@@ -307,25 +324,10 @@ observer.observe({
 });
 ```
 
-## More info
-
-For now this repo and explainer is a place-holder.
-An API is described in this [slide deck](https://docs.google.com/presentation/d/1d8VaGHF9OFF9Kuy--jIUvYLcGouPtJg7Yxtryk3HvMc/edit).
-This API was discussed at the [WebPerfWG meeting on 2026-09-10](https://docs.google.com/document/d/10dz_7QM5XCNsGeI63R864lF9gFqlqQD37B4q8Q46LMM/edit?tab=t.0#heading=h.pndss1ey0460)
-and this repo has been created to facilitate discussion.
-The content from that slide deck will be moved into this explainer.
-
-There are many issues with the API shape of this proposal
-- maybe it should align with the JS Profiling API
-
-Right now, the API shape is secondary to figuring out
-- what would actually be useful (and used in reality)
-- what should be part of the API and what should be left to be implemented in JS around the API
-
-# This explainer is incomplete
-
 ## Detailed design discussion
 
+TBD
+<!--
 ### [Tricky design choice #1]
 
 [Talk through the tradeoffs in coming to the specific design point you want to make.]
@@ -354,27 +356,41 @@ and why you decided against it.]
 ### [Alternative 2]
 
 [etc.]
-
+ -->
 ## Security and Privacy Considerations
 
+TBD
+<!--
 [Describe any interesting answers you give to the [Security and Privacy Self-Review
 Questionnaire](https://www.w3.org/TR/security-privacy-questionnaire/) and any interesting ways that
 your feature interacts with [Chromium's Web Platform Security
 Guidelines](https://chromium.googlesource.com/chromium/src/+/master/docs/security/web-platform-security-guidelines.md).]
-
+-->
 ## Stakeholder Feedback / Opposition
 
-[Implementors and other stakeholders may already have publicly stated positions on this work. If you can, list them here with links to evidence as appropriate.]
+TBD
+<!--
+ [Implementors and other stakeholders may already have publicly stated positions on this work. If you can, list them here with links to evidence as appropriate.]
 
 - [Implementor A] : Positive
 - [Stakeholder B] : No signals
 - [Implementor C] : Negative
 
 [If appropriate, explain the reasons given by other implementors for their concerns.]
+-->
+# Open issues
+There are many issues with the API shape of this proposal
+- maybe it should align with the JS Profiling API
+
+Right now, the API shape is secondary to figuring out
+- what would actually be useful (and used in reality)
+- what should be part of the API and what should be left to be implemented in JS around the API
 
 ## References & acknowledgements
 
-[Your design will change and be informed by many people; acknowledge them in an ongoing way! It helps build community and, as we only get by through the contributions of many, is only fair.]
+TBD
+
+<!-- [Your design will change and be informed by many people; acknowledge them in an ongoing way! It helps build community and, as we only get by through the contributions of many, is only fair.]
 
 [Unless you have a specific reason not to, these should be in alphabetical order.]
 
@@ -383,3 +399,13 @@ Many thanks for valuable feedback and advice from:
 - [Person 1]
 - [Person 2]
 - [etc.]
+-->
+# History
+
+This API was first proposed this [slide deck][slide-deck].
+This was discussed at the [WebPerfWG meeting on 2026-09-10][wg-meeting-2026-09-10]
+and this repo has been created to facilitate discussion.
+The content from that slide deck is being moved into this explainer.
+
+[slide-deck]: https://docs.google.com/presentation/d/1d8VaGHF9OFF9Kuy--jIUvYLcGouPtJg7Yxtryk3HvMc/edit
+[wg-meeting-2026-09-10]: https://docs.google.com/document/d/10dz_7QM5XCNsGeI63R864lF9gFqlqQD37B4q8Q46LMM/edit?tab=t.0#heading=h.pndss1ey0460
