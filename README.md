@@ -184,6 +184,82 @@ RUM providers often want to wrap event handlers in their own code.
 This means that if we are not careful,
 we could report all events as being RUM code.
 
+## Potential solution
+
+This describes an extension of the `PerformanceObserver` API
+that provides information on how much work was done
+over set periods of time,
+breaking that work to various categories.
+
+### Data
+
+```js
+
+// Data from this API aggregates over an interval of time.
+interface Interval {
+  // The duration of the interval used for aggregation.
+  durationMs: number;
+  // The start time for aggregation of this interval.
+  startTimestamp: number;
+  // How many buckets there are in this interval.
+  // The interval is split into this many equal-length buckets of time.
+  buckets: number;
+  // A breakdown of the work done during this interval into categories.
+  work: Work;
+  // Other metadata about the interval
+  …
+}
+
+interface Work {
+  // The initiator of the work done.
+  // See below for details.
+  name: string;
+  // The number buckets in this interval in which work was done by this initiator.
+  // 0 <= work <= 1.
+  workedBuckets: number;
+  // The number of distinct work events in this interval by this initiator.
+  workCount: number;
+  // The amount of ms of CPU time used in this interval by this initiator.
+  cpuMs: number;
+  // The duration of longest contiguous span of time where no work was done by this initiator.
+  longestIdleMs: number;
+
+  // A breakdown of the work into further sub-categories of initiator.
+  children: Work[];
+}
+```
+
+#### Initiators
+
+Initiators allow devs to understand what caused the work.
+They form a tree, with more information being added at each level.
+
+Examples:
+- "all": the top-level category that includes all work.
+  - "js": javascript tasks
+    - "toplevel": JS which ran from the top-level
+    - "setTimeout":
+    - "setInterval":
+    - "promise":
+    - "event": JS which ran from an event
+      - event-type: the `.type` of the event
+  - "animation": directly attributable to animation
+    - name: the `animation-name` property from CSS
+  - "style": due to recalculation of CSS styles
+  - "layout":
+  - "paint":
+  - "media": due to media playing
+
+All "js" initiators break down further with
+- filename: the file in which the JS lives
+  - line and column: the location of the JS in that file
+
+Other initiators could have further breakdown to identify them more specifically.
+For example, having animations identify
+which element was being animated
+would be more helpful
+than just the animation name.
+
 ## More info
 
 For now this repo and explainer is a place-holder.
@@ -201,46 +277,6 @@ Right now, the API shape is secondary to figuring out
 - what should be part of the API and what should be left to be implemented in JS around the API
 
 # This explainer is incomplete
-
-*The document from here down is the remaining parts of the template.
-It will be filled out soon.*
-
-[For each related element of the proposed solution - be it an additional JS method, a new object, a new element, a new concept etc., create a section which briefly describes it.]
-
-```js
-// Provide example code - not IDL - demonstrating the design of the feature.
-
-// If this API can be used on its own to address a user need,
-// link it back to one of the scenarios in the goals section.
-
-// If you need to show how to get the feature set up
-// (initialized, or using permissions, etc.), include that too.
-```
-
-[Where necessary, provide links to longer explanations of the relevant pre-existing concepts and API.
-If there is no suitable external documentation, you might like to provide supplementary information as an appendix in this document, and provide an internal link where appropriate.]
-
-[If this is already specced, link to the relevant section of the spec.]
-
-[If spec work is in progress, link to the PR or draft of the spec.]
-
-[If you have more potential solutions in mind, add ## Potential Solution 2, 3, etc. sections.]
-
-### How this solution would solve the use cases
-
-[If there are a suite of interacting APIs, show how they work together to solve the use cases described.]
-
-#### Use case 1
-
-[Description of the end-user scenario]
-
-```js
-// Sample code demonstrating how to use these APIs to address that scenario.
-```
-
-#### Use case 2
-
-[etc.]
 
 ## Detailed design discussion
 
