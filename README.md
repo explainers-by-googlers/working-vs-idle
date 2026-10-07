@@ -193,39 +193,41 @@ breaking that work to various categories.
 
 ### Data
 
-```js
-
-// Data from this API aggregates over an interval of time.
-interface Interval {
-  // The duration of the interval used for aggregation.
-  durationMs: number;
-  // The start time for aggregation of this interval.
-  startTimestamp: number;
-  // How many buckets there are in this interval.
-  // The interval is split into this many equal-length buckets of time.
-  buckets: number;
-  // A breakdown of the work done during this interval into categories.
-  work: Work;
-  // Other metadata about the interval
-  …
-}
-
-interface Work {
+```web-idl
+dictionary Work {
   // The initiator of the work done.
   // See below for details.
-  name: string;
+  DOMString name;
   // The number buckets in this interval in which work was done by this initiator.
   // 0 <= work <= 1.
-  workedBuckets: number;
+  unsigned long workedBuckets;
   // The number of distinct work events in this interval by this initiator.
-  workCount: number;
+    unsigned long workCount;
   // The amount of ms of CPU time used in this interval by this initiator.
-  cpuMs: number;
+  DOMHighResTimeStamp: cpuMs;
   // The duration of longest contiguous span of time where no work was done by this initiator.
-  longestIdleMs: number;
+  DOMHighResTimeStamp longestIdleMs;
 
   // A breakdown of the work into further sub-categories of initiator.
-  children: Work[];
+  FrozenArray<Work> children;
+}
+
+// Data from this API aggregates over an interval of time.
+dictionary Interval {
+  // The duration of the interval used for aggregation.
+  DOMHighResTimeStamp durationMs;
+  // The start time for aggregation of this interval.
+  DOMHighResTimeStamp startTimestamp;
+  // How many buckets there are in this interval.
+  // The interval is split into this many equal-length buckets of time.
+  unsigned long buckets;
+  // A breakdown of the work done during this interval into categories.
+  Work work;
+  // Other metadata about the interval
+}
+
+interface PerformanceWork extends PerformanceEntry {
+  Interval workInterval;
 }
 ```
 
@@ -260,6 +262,51 @@ which element was being animated
 would be more helpful
 than just the animation name.
 
+### Invocation
+
+Because the work observer allows several specialized options,
+we add a new `WorkOptions` interface
+
+```js
+dictionary WorkOptions {
+  DOMHighResTimeStamp bucketDuration;
+  // The requested duration of the interval.
+  // Reported intervals may have a different duration to that requested.
+  // Intervals may be truncated because they are reported just before `pagehide`.
+  // Intervals may be extended because they represent a long period with no work.
+  DOMHighResTimeStamp intervalDuration;
+  // If true, an entry will be reported immediately every `intervalDuration`,
+  // whether or not any work occurred in that interval.
+  // The callback to handle the report will be excluded from the report
+  // but it will be included as work by any other `PerformanceObserver`.
+  // If false, the observer callback will not be called
+  // until there is at least one entry that contains work.
+  //
+  // ***
+  // Use with extreme care.
+  // This will result in recurring JS callbacks until `disconnect` is called.
+  // ***
+  boolean reportIdle;
+}
+```
+
+```js
+function workObserver(list, observer, options) {
+  for (const entry of entries.getEntries()) {
+    console.log(entry.toJSON());
+  }
+}
+
+const observer = new PerformanceObserver(workObserver);
+observer.observe({
+  type: "work",
+  workOptions: {
+    bucketDuration: 10,  // ms
+    intervalDuration: 10000,  // ms
+  },
+});
+```
+
 ## More info
 
 For now this repo and explainer is a place-holder.
@@ -269,7 +316,6 @@ and this repo has been created to facilitate discussion.
 The content from that slide deck will be moved into this explainer.
 
 There are many issues with the API shape of this proposal
-- maybe it should align with `PerformanceObserver`
 - maybe it should align with the JS Profiling API
 
 Right now, the API shape is secondary to figuring out
