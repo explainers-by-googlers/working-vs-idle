@@ -159,6 +159,20 @@ In dev mode the site could visually indicate this
 so that devs get immediate feedback
 when they introduce bad changes.
 
+### Automated testing of idleness
+
+It should be possible to write automated tests
+that verify that after performing some interaction,
+a page reaches an idle state within some duration.
+
+### Detection of idle state
+
+Pages may have work that they want to do
+but do not want that work to interfere with
+ongoing user-facing activity in the page.
+This API could be used to determine
+when the page has reached an idle state.
+
 ### Detect expensive or unintended animations
 
 We know that teams at Google and elsewhere
@@ -331,6 +345,254 @@ observer.observe({
 });
 ```
 
+### How this solution would solve the use cases
+
+### Longitudinal monitoring
+
+The following code would report back (to a server)
+the avg number of 10ms buckets that contained work and
+the average cpu usage over the lifetime of the page.
+
+This is a pretty crude measurement.
+Sites might want to record separate measurements
+for different types of work being done.
+Some sites might expect to high have media playback
+but should still be on the lookout for non-stop JS.
+
+Sites could also easily produce measurements
+broken down by whether the page is visible and/or has focus
+since the expected amount of work done
+is probably quite different depending on those states.
+A page that does not reach an idle state while not visible
+probably has a bug.
+This kind of monitoring is especially important for pages
+that are excluded from freezing by browsers
+(e.g. pages with chat clients or ongoing media).
+
+```js
+function workObserver(list, observer, options) {
+  for (const entry of list.getEntries()) {
+    const interval = entry.workInterval;
+    totalBuckets += interval.buckets;
+    totalWorkingBuckets += interval.work.workedBuckets;
+    totalTimeMs += interval.duration;
+    totalCpuMs += interval.work.cpuMs;
+  }
+}
+
+function zeroWorkStats() {
+  return {
+    totalBuckets: 0,
+    totalWorkingBuckets: 0,
+    totalTimeMs: 0,
+    totalCpuMs: 0,
+  };
+}
+var workStats = zeroWorkStats();
+
+const observer = new PerformanceObserver(workObserver);
+
+window.addEventListener("pagehide", () => {
+  // Collect any remaining records.
+  const list = observer.takeRecords();
+  workObserver(list, observer);
+  reportWorkStats(
+    workStats.totalWorkingBuckets / workStats.totalBuckets,
+    workStats.totalCpuMs / workStats.totalTimeMs,
+  );
+  // The page might go into BFCache and return again.
+  // No entries should be generated while in BFCache.
+  workStats = zeroWorkStats();
+});
+
+observer.observe({
+  type: "work",
+  bucketDuration: 10,  // ms
+  intervalDuration: 10000,  // ms
+});
+```
+
+### Immediate feedback to devs
+
+The goal here is to identify unwanted work in real-time
+and surface this immediately.
+This could be through the UI
+(if the user is a developer or dev user)
+or to cause more detailed logs to be sent to the server
+to debug the cause of the extra work.
+
+The `ActivityTracker` class below is not part of the API proposal.
+Android provides a [PerformanceMetricsState][performance-metrics-state] library
+which allows putting and removing named states.
+These states are then included as annotations
+on reports from the [JankStats][jank-stats] library
+and possibly other performance related libraries.
+`ActivityTracker` is something similar.
+Something like it *could* be a useful WP API in the future
+but for this explainer we just assume a JS class
+with the following interface.
+
+```js
+interface ActivityTracker {
+  // `onExpectationChanged` is called whenever the amount of ongoing activity changes.
+  constructor(onExpectationChanged);
+  // Returns a dictionary. The keys activity name `strings`
+  // and the values are a `number` for the current count for that activity.
+  // Activities with a count of `0` are omitted.
+  getActivities():
+  // Increments the count for `activityName`.
+  putActivity(activityName: string);
+  // Decrements the count for `activityName`.
+  // It is an error to decrement an activity with a `0` count.
+  removeActivity(activityName: string);
+  // Returns whether there are any activities with a non-zero count.
+  hasActivity(): bool;
+}
+```
+
+```js
+let observer;
+// Timestamp of when we started observing.
+let observerStart;
+
+function findWork(interval, name) {
+  for (const child in interval.children) {
+    if (interval.name == name) {
+      return interval;
+    }
+  }
+}
+
+function idleObserver(list, observer, options) {
+  if (!activityTracker.hasActivity()) {
+    // While we were waiting, we now expect activity.
+    // So we shouldn't expect idleness.
+    return;
+  }
+  // If no work occurs, the observer is not called.
+  // So if we are not expecting activity but the observer is called,
+  // we should see if it's worth alerting.
+  const entries = list.getEntries()
+  if (firstInterval) {
+    const interval = entries.shift();
+    firstInterval = false;
+  }
+  for (const entry of entries) {
+    // Maybe we expect some residual activity in the first 10s.
+    if (entry.startTime < observerStart + 10 * 1000) {
+      continue;
+    }
+    const work = findWork(entry.workInterval, "js");
+    if (work) {
+      alertTheUser(work);
+    }
+  }
+}
+
+function onActivityChanged(activityTracker) {
+  if (!activityTracker.hasActivity()) {
+    // We have transitioned to expecting no activity.
+    // Start monitoring.
+    observer = new PerformanceObserver(idleObserver);
+    observerStart = Date.now();
+    observer.observe({
+      type: "work",
+      bucketDuration: 10,  // ms
+      intervalDuration: 10000,  // ms
+    });
+  } else {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  }
+}
+
+var activityTracker = new ActivityTracker(onActivityChanged);
+```
+
+We could be much more selective
+and use the more detailed initiator information
+to only alert about work coming from code in our origin etc.
+
+This still leaves us with the problem
+of correctly registering and unregistering all work
+with the `ActivityTracker`
+but that is a problem that is amenable to tooling and automated testing.
+
+### Automated testing of idleness
+
+```js
+// Tests whether we reach idleness before `timeoutMs`.
+// "idleness" means that we have a period `idleDurationMs` where no work is done.
+// This can takes `timeoutMs + idleDurationMs` to test.
+function expectIdle(idleDurationMs, timeoutMs) {
+  setTimeout(() => detectIdleness(idleDurationMs), timeoutMs);
+}
+
+function detectIdleness(idleDurationMs) {
+  const observer = new PerformanceObserver(idleObserver);
+  observer.observe({
+    type: "work",
+    bucketDuration: 100,  // ms
+    intervalDuration: idleDurationMs + 1000,  // ms
+    // Even if no work is done, report the interval proactively.
+    reportIdle: true,
+  });
+};
+
+function idleObserver(list, observer, options) {
+  observer.disconnect();
+  const entry = list.getEntries()[0];
+  if (entry.interval.work.workedBuckets == 0) {
+    TestPass();
+  } else {
+    TestFail();
+  }
+}
+```
+
+### Detection of idle state
+
+To detect when we have reach idleness,
+we can
+```js
+function findWork(interval, name) {
+  for (const child in interval.children) {
+    if (interval.name == name) {
+      return interval;
+    }
+  }
+}
+
+// Calls `onIdle` when (at least) `idleDurationMs` of time passes without JS activity.
+function expectIdle(idleDurationMs, onIdle) {
+  const idleObserver = (list, observer, options) => {
+    for (const entry of list.getEntries()) {
+      const work = findWork(entry.workInterval, "js");
+      if (!work) {
+        observer.disconnect();
+        onIdle();
+        return;
+      }
+    }
+  }
+
+  const observer = new PerformanceObserver(idleObserver);
+  observer.observe({
+    type: "work",
+    bucketDuration: 100,  // ms
+    intervalDuration: idleDurationMs + 1000,  // ms
+    // Even if no work is done, report the interval proactively.
+    reportIdle: true,
+  });
+};
+```
+
+### Detect expensive or unintended animations
+
+TBD
+
 ## Detailed design discussion
 
 TBD
@@ -414,5 +676,7 @@ This was discussed at the [WebPerfWG meeting on 2026-09-10][wg-meeting-2026-09-1
 and this repo has been created to facilitate discussion.
 The content from that slide deck is being moved into this explainer.
 
+[performance-metrics-state]: https://developer.android.com/reference/androidx/metrics/performance/PerformanceMetricsState
+[jank-stats]: https://developer.android.com/topic/performance/jankstats
 [slide-deck]: https://docs.google.com/presentation/d/1d8VaGHF9OFF9Kuy--jIUvYLcGouPtJg7Yxtryk3HvMc/edit
 [wg-meeting-2026-09-10]: https://docs.google.com/document/d/10dz_7QM5XCNsGeI63R864lF9gFqlqQD37B4q8Q46LMM/edit?tab=t.0#heading=h.pndss1ey0460
