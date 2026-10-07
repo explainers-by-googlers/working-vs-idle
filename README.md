@@ -151,6 +151,39 @@ These have drawbacks like requiring actual dropped frames
 (which often don't happen on the high end machines that developers typically use)
 and intrusive code changes or monkey-patching.
 
+## Challenges
+
+### Performance
+
+We must ensure that turn on this API
+does not have a noticeable impact on performance.
+When no work is occurring this API has no overheard.
+Hopefully, when work is occurring,
+the work done by each initiator is much more expensive
+than the cost of recording that work.
+
+### Distinguishing intentional work from unintentional work
+
+As far as the browser is concerned,
+all work is intentional.
+It cannot distinguish an animation
+that is running intentionally
+from one that is running unintentionally.
+There should be a way for devs to signal
+that some work is ongoing
+so that that work can be tagged.
+Unfortunately, providing this kind of mechanism
+opens up a new category of bugs where we fail to correctly express
+whether work is intentional or not!
+In particular, failing to correctly mark the end of intentional work
+seems like a real danger.
+
+### Assigning initiators
+
+RUM providers often want to wrap event handlers in their own code.
+This means that if we are not careful,
+we could report all events as being RUM code.
+
 ## More info
 
 For now this repo and explainer is a place-holder.
