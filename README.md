@@ -201,6 +201,13 @@ RUM providers often want to wrap event handlers in their own code.
 This means that if we are not careful,
 we could report all events as being RUM code.
 
+### Not generating more work
+
+It's essential that this API can be used in a way
+that allows monitoring of work
+without interrupting what would otherwise be
+periods of idleness for the page.
+
 ## Potential solution
 
 This describes an extension of the `PerformanceObserver` API
