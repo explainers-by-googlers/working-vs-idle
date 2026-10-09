@@ -595,22 +595,49 @@ TBD
 
 ## Detailed design discussion
 
-TBD
+Once installed, a `"work"` `PerformanceObserver`
+produces `PerformanceWork` records.
+
+### Avoiding work and wake-ups
+
+To minimize the amount of work and wake-ups
+caused by using this API,
+we do several things
+that might be out of line with other `PerformanceObserver`s.
+
+#### Merge idle records
+
+To avoid a situation where a long period of idleness results in a huge number of empty records,
+we merge records that are purely idle.
+A record that has some work in it should still represent the requested `intervalDuration` and not be extended indefinitely by idle time
+but we should avoid presenting consecutive, purely-idle records.
+
+#### Deliver records only when work occurs
+
+If the observer has requested a 10s `intervalDuration`
+and work stops after 7s
+then we should not proactively deliver the record at the 10s mark.
+Instead we should wait until some other work occurs
+and post a task to invoke callback with the record.
+This way we never wake up the CPU just to process `PerformanceWork` records.
+
+#### Hide the callback's work when `reportIdle` is `true`
+
+If `reportIdle` is `true` then we will proactively call the observer callback
+whenever a record is available.
+We will not merge idle records.
+In that case,
+if we were to include the work done running the callback
+in the reported work,
+it would be harder (but not impossible)
+to identify a record that has no work in it.
+The callback should still appear as work to other work observers
+since it is doing work and waking up the CPU.
+
+This is an ergonomic convenience
+and might be dropped if implementation becomes complicated.
+
 <!--
-### [Tricky design choice #1]
-
-[Talk through the tradeoffs in coming to the specific design point you want to make.]
-
-```js
-// Illustrated with example code.
-```
-
-[This may be an open question,
-in which case you should link to any active discussion threads.]
-
-### [Tricky design choice 2]
-
-[etc.]
 
 ## Considered alternatives
 
