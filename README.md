@@ -621,6 +621,27 @@ Instead we should wait until some other work occurs
 and post a task to invoke callback with the record.
 This way we never wake up the CPU just to process `PerformanceWork` records.
 
+### `takeRecords` should end the current interval
+
+In a stats reporting use-case
+pages need to be able to see records for all of the work
+for the full lifetime of the page.
+Due to the behaviours above,
+we do not proactively deliver all available information
+and significant parts of the page's lifetime
+may not have been delivered yet.
+So when `takeRecords()` is called,
+we should finalize the current interval
+and create `PerformanceWork` record for it.
+
+We could also consider only doing that in `pagehide`
+or other page-ending lifecycle events
+however I cannot see any upside to this inconsistency.
+No work recording occurs before a work observer is created,
+so calling `takeRecords` only makes sense
+as a way of finalizing things to get a complete record
+up to the current moment.
+
 #### Hide the callback's work when `reportIdle` is `true`
 
 If `reportIdle` is `true` then we will proactively call the observer callback
