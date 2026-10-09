@@ -640,7 +640,7 @@ however I cannot see any upside to this inconsistency.
 No work recording occurs before a work observer is created,
 so calling `takeRecords` only makes sense
 as a way of finalizing things to get a complete record
-up to the current moment.
+up to the current moment  .
 
 #### Hide the callback's work when `reportIdle` is `true`
 
@@ -658,22 +658,30 @@ since it is doing work and waking up the CPU.
 This is an ergonomic convenience
 and might be dropped if implementation becomes complicated.
 
-<!--
-
 ## Considered alternatives
 
-[This should include as many alternatives as you can,
-from high level architectural decisions down to alternative naming choices.]
+### Integrate into JS Self-Profiling
 
-### [Alternative 1]
+The [JS Self-Profiling API][js-self-profiling] arguably provides something similar.
+I don't think this a great match because
+- it has a setup overhead
+- it has a significant runtime overhead.
+  Perhaps that overhead would be no worse than the above proposal
+  if we only took initiators rather than full stack traces.
+- it is based on periodic sampling,
+  so can miss tasks that are periodic
+  but very short duration,
+  so it cannot distinguish between truly idle
+  and mostly idle.
+- it only applies to JS
+  and extending that to apply a sampling approach
+  to tasks that are handled in native code by the browser
+  is a very different proposition.
 
-[Describe an alternative which was considered,
-and why you decided against it.]
+The API proposed above is actually closer browsers' tracing system,
+if you were to discard all but the first level of the stacks
+and then aggregate that.
 
-### [Alternative 2]
-
-[etc.]
- -->
 ## Security and Privacy Considerations
 
 ### Cross-origin scripts
@@ -749,5 +757,6 @@ The content from that slide deck is being moved into this explainer.
 
 [performance-metrics-state]: https://developer.android.com/reference/androidx/metrics/performance/PerformanceMetricsState
 [jank-stats]: https://developer.android.com/topic/performance/jankstats
+[js-self-profiling]: https://developer.mozilla.org/en-US/docs/Web/API/JS_Self-Profiling_API
 [slide-deck]: https://docs.google.com/presentation/d/1d8VaGHF9OFF9Kuy--jIUvYLcGouPtJg7Yxtryk3HvMc/edit
 [wg-meeting-2026-09-10]: https://docs.google.com/document/d/10dz_7QM5XCNsGeI63R864lF9gFqlqQD37B4q8Q46LMM/edit?tab=t.0#heading=h.pndss1ey0460
