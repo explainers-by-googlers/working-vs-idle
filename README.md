@@ -655,13 +655,36 @@ and why you decided against it.]
  -->
 ## Security and Privacy Considerations
 
-TBD
-<!--
-[Describe any interesting answers you give to the [Security and Privacy Self-Review
+### Cross-origin scripts
+
+We need to be careful about reporting work done by cross-origin scripts
+as this would leak information about their activity
+that could not otherwise be found.
+
+If the work is done purely by the cross-origin script
+then it should be invisible
+or at least anonymized.
+
+If a cross-origin script calls into this origin's code
+then this work was detectable by the page
+and should be included.
+There is a question of what to record.
+Should we record only the work done by this origin?
+
+TODO: Investigate how the self-profiler handles this.
+
+TODO: Express this correctly in terms of CORS etc.
+Ensure there is a way for scripts to declare that they should be fully transparent.
+E.g. work initiated by React.js should be reported
+regardless of whether the React code is hosted same-origin or elsewhere.
+
+### Self-review Questionnaire
+
+TODO: Describe any interesting answers you give to the [Security and Privacy Self-Review
 Questionnaire](https://www.w3.org/TR/security-privacy-questionnaire/) and any interesting ways that
 your feature interacts with [Chromium's Web Platform Security
-Guidelines](https://chromium.googlesource.com/chromium/src/+/master/docs/security/web-platform-security-guidelines.md).]
--->
+Guidelines](https://chromium.googlesource.com/chromium/src/+/master/docs/security/web-platform-security-guidelines.md).
+
 ## Stakeholder Feedback / Opposition
 
 TBD
